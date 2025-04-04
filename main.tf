@@ -60,7 +60,7 @@ module "eks" {
                     },
                     "exporters": {
                         "prometheusremotewrite": {
-                            "endpoint": "${module.monitoring.prometheus.endpoint}api/v1/remote_write"
+                            "endpoint": "${aws_prometheus_workspace.this.prometheus_endpoint}api/v1/remote_write"
                         }
                     },
                     "pipelines": {
@@ -124,39 +124,6 @@ module "irsa-ebs-csi" {
   oidc_fully_qualified_subjects = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
 }
 
-data "aws_iam_policy" "prometheus_remote_write" {
-  arn = "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess"
-}
-
-data "aws_iam_policy" "cloudwatch_agent" {
-  arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-}
-
-module "prom_remote_write" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
-  version = "5.39.0"
-
-  create_role                   = true
-  role_name                     = "AmpIngestionRole-${module.eks.cluster_name}"
-  provider_url                  = module.eks.oidc_provider
-  role_policy_arns              = [data.aws_iam_policy.prometheus_remote_write.arn]
-  oidc_fully_qualified_subjects = ["system:serviceaccount:prometheus:amp-iamproxy-ingest-role"]
-}
-module "prom_metrics_role" {
-
-  source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
-  version = "5.39.0"
-
-  create_role                   = true
-  role_name                     = "AdotPromRole-${module.eks.cluster_name}"
-  provider_url                  = module.eks.oidc_provider
-  role_policy_arns              = [
-    data.aws_iam_policy.prometheus_remote_write.arn,
-    data.aws_iam_policy.cloudwatch_agent.arn
-  ]
-  oidc_fully_qualified_subjects = ["system:serviceaccount:prometheus:amp-iamproxy-ingest-role"]
-}
-
 resource "helm_release" "cert_manager" {
   name       = "cert-manager"
   repository = "https://charts.jetstack.io"
@@ -170,35 +137,28 @@ resource "helm_release" "cert_manager" {
   }
 }
 
-module "monitoring" {
-  source = "./modules/monitoring"
-  namespace = local.namespace
-  stage = local.profile
-  iam_proxy_role_arn = module.prom_remote_write.iam_role_arn
+resource "aws_prometheus_workspace" "this" {
+  alias = "${local.namespace}-amp"
 }
 
-# resource "kubernetes_pod" "test" {
-#   metadata {
-#     name = "hello-pod"
-#     labels = {
-#       "zone" = "prod"
-#       "version" = "v1"
-#     }
-#   }
-#   spec {
-#     container {
-#       name = "hello-ctr"
-#       image = "nigelpoulton/k8sbook:1.0"
-#       port {
-#         container_port = 8080
-#       }
-#       resources {
-#         limits = {
-#           memory = "256Mi"
-#           cpu = 0.5
-#         }
-#       }
+data "aws_iam_policy" "prometheus_remote_write" {
+  arn = "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess"
+}
 
-#     }
-#   }
-# }
+data "aws_iam_policy" "cloudwatch_agent" {
+  arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+module "prom_metrics_role" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
+  version = "5.39.0"
+
+  create_role                   = true
+  role_name                     = "AdotPromRole-${module.eks.cluster_name}"
+  provider_url                  = module.eks.oidc_provider
+  role_policy_arns              = [
+    data.aws_iam_policy.prometheus_remote_write.arn,
+    data.aws_iam_policy.cloudwatch_agent.arn
+  ]
+  oidc_fully_qualified_subjects = ["system:serviceaccount:prometheus:amp-iamproxy-ingest-role"]
+}
