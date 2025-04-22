@@ -25,6 +25,7 @@ resource "aws_iam_policy" "terraform" {
             "route53:*",
             "route53resolver:*",
             "ssm:StartSession",
+            "eks:*"
           ]
           Effect   = "Allow"
           Resource = "*"
