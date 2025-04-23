@@ -1,5 +1,9 @@
 provider "aws" {
   region = local.region
+  assume_role {
+    role_arn = "arn:aws:iam::594515248465:role/netauto_terraform"
+    session_name = "terraform_session"
+  }
 }
 
 data "aws_eks_cluster" "this" {

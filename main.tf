@@ -49,31 +49,31 @@ module "eks" {
       service_account_role_arn = module.irsa-ebs-csi.iam_role_arn
     }
     adot = {
-      configuration_values = jsonencode(
-        {
-            "collector": {
-                "prometheusMetrics": {
-                    "serviceAccount": {
-                      "annotations": {
-                          "eks.amazonaws.com/role-arn" = "${module.prom_metrics_role.iam_role_arn}"
-                      }
-                    },
-                    "exporters": {
-                        "prometheusremotewrite": {
-                            "endpoint": "${aws_prometheus_workspace.this.prometheus_endpoint}api/v1/remote_write"
-                        }
-                    },
-                    "pipelines": {
-                        "metrics": {
-                            "amp": {
-                                "enabled": true
-                            }
-                        }
-                    }
-                }
-            }
-        } 
-      )
+      # configuration_values = jsonencode(
+      #   {
+      #       "collector": {
+      #           "prometheusMetrics": {
+      #               "serviceAccount": {
+      #                 "annotations": {
+      #                     "eks.amazonaws.com/role-arn" = "${module.prom_metrics_role.iam_role_arn}"
+      #                 }
+      #               },
+      #               "exporters": {
+      #                   "prometheusremotewrite": {
+      #                       "endpoint": "${aws_prometheus_workspace.this.prometheus_endpoint}api/v1/remote_write"
+      #                   }
+      #               },
+      #               "pipelines": {
+      #                   "metrics": {
+      #                       "amp": {
+      #                           "enabled": true
+      #                       }
+      #                   }
+      #               }
+      #           }
+      #       }
+      #   } 
+      # )
     }
     
   }
