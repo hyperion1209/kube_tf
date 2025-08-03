@@ -38,52 +38,52 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 21.0"
 
-  name    = local.cluster_name
+  name               = local.cluster_name
   kubernetes_version = "1.33"
 
-  endpoint_public_access           = true
+  endpoint_public_access                   = true
   enable_cluster_creator_admin_permissions = true
 
   addons = {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.irsa-ebs-csi.iam_role_arn
     }
-    coredns                = {}
+    coredns = {}
     eks-pod-identity-agent = {
       before_compute = true
     }
-    kube-proxy             = {}
-    vpc-cni                = {
+    kube-proxy = {}
+    vpc-cni = {
       before_compute = true
     }
     # adot = {
-      # configuration_values = jsonencode(
-      #   {
-      #       "collector": {
-      #           "prometheusMetrics": {
-      #               "serviceAccount": {
-      #                 "annotations": {
-      #                     "eks.amazonaws.com/role-arn" = "${module.prom_metrics_role.iam_role_arn}"
-      #                 }
-      #               },
-      #               "exporters": {
-      #                   "prometheusremotewrite": {
-      #                       "endpoint": "${aws_prometheus_workspace.this.prometheus_endpoint}api/v1/remote_write"
-      #                   }
-      #               },
-      #               "pipelines": {
-      #                   "metrics": {
-      #                       "amp": {
-      #                           "enabled": true
-      #                       }
-      #                   }
-      #               }
-      #           }
-      #       }
-      #   } 
-      # )
+    # configuration_values = jsonencode(
+    #   {
+    #       "collector": {
+    #           "prometheusMetrics": {
+    #               "serviceAccount": {
+    #                 "annotations": {
+    #                     "eks.amazonaws.com/role-arn" = "${module.prom_metrics_role.iam_role_arn}"
+    #                 }
+    #               },
+    #               "exporters": {
+    #                   "prometheusremotewrite": {
+    #                       "endpoint": "${aws_prometheus_workspace.this.prometheus_endpoint}api/v1/remote_write"
+    #                   }
+    #               },
+    #               "pipelines": {
+    #                   "metrics": {
+    #                       "amp": {
+    #                           "enabled": true
+    #                       }
+    #                   }
+    #               }
+    #           }
+    #       }
+    #   } 
+    # )
     # }
-    
+
   }
 
   vpc_id     = module.vpc.vpc_id
@@ -91,7 +91,7 @@ module "eks" {
 
   eks_managed_node_groups = {
     one = {
-      name = "node-group-1"
+      name     = "node-group-1"
       ami_type = "AL2023_x86_64_STANDARD"
 
       instance_types = ["m5.2xlarge"]
@@ -102,7 +102,7 @@ module "eks" {
     }
 
     two = {
-      name = "node-group-2"
+      name     = "node-group-2"
       ami_type = "AL2023_x86_64_STANDARD"
 
       instance_types = ["m5.2xlarge"]

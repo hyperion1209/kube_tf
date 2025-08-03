@@ -45,7 +45,7 @@ resource "aws_iam_policy" "terraform_assume_role" {
     {
       Statement = [
         {
-          Action = "sts:AssumeRole",
+          Action   = "sts:AssumeRole",
           Effect   = "Allow"
           Resource = "${aws_iam_role.terraform.arn}"
         },
