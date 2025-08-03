@@ -39,7 +39,7 @@ module "eks" {
   version = "20.8.5"
 
   cluster_name    = local.cluster_name
-  cluster_version = "1.31"
+  cluster_version = "1.33"
 
   cluster_endpoint_public_access           = true
   enable_cluster_creator_admin_permissions = true
@@ -48,7 +48,7 @@ module "eks" {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.irsa-ebs-csi.iam_role_arn
     }
-    adot = {
+    # adot = {
       # configuration_values = jsonencode(
       #   {
       #       "collector": {
@@ -74,7 +74,7 @@ module "eks" {
       #       }
       #   } 
       # )
-    }
+    # }
     
   }
 
@@ -82,7 +82,7 @@ module "eks" {
   subnet_ids = module.vpc.private_subnets
 
   eks_managed_node_group_defaults = {
-    ami_type = "AL2_x86_64"
+    ami_type = "AL2023_x86_64_STANDARD"
 
   }
 
@@ -124,41 +124,41 @@ module "irsa-ebs-csi" {
   oidc_fully_qualified_subjects = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
 }
 
-resource "helm_release" "cert_manager" {
-  name       = "cert-manager"
-  repository = "https://charts.jetstack.io"
-  chart      = "cert-manager"
-  version    = "v1.17.0"
-  namespace = "cert-manager"
-  create_namespace = true
-  set {
-    name = "crds.enabled"
-    value = true
-  }
-}
+# resource "helm_release" "cert_manager" {
+#   name       = "cert-manager"
+#   repository = "https://charts.jetstack.io"
+#   chart      = "cert-manager"
+#   version    = "v1.17.0"
+#   namespace = "cert-manager"
+#   create_namespace = true
+#   set {
+#     name = "crds.enabled"
+#     value = true
+#   }
+# }
 
-resource "aws_prometheus_workspace" "this" {
-  alias = "${local.namespace}-amp"
-}
+# resource "aws_prometheus_workspace" "this" {
+#   alias = "${local.namespace}-amp"
+# }
 
-data "aws_iam_policy" "prometheus_remote_write" {
-  arn = "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess"
-}
+# data "aws_iam_policy" "prometheus_remote_write" {
+#   arn = "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess"
+# }
 
-data "aws_iam_policy" "cloudwatch_agent" {
-  arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-}
+# data "aws_iam_policy" "cloudwatch_agent" {
+#   arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+# }
 
-module "prom_metrics_role" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
-  version = "5.39.0"
+# module "prom_metrics_role" {
+#   source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
+#   version = "5.39.0"
 
-  create_role                   = true
-  role_name                     = "AdotPromRole-${module.eks.cluster_name}"
-  provider_url                  = module.eks.oidc_provider
-  role_policy_arns              = [
-    data.aws_iam_policy.prometheus_remote_write.arn,
-    data.aws_iam_policy.cloudwatch_agent.arn
-  ]
-  oidc_fully_qualified_subjects = ["system:serviceaccount:prometheus:amp-iamproxy-ingest-role"]
-}
+#   create_role                   = true
+#   role_name                     = "AdotPromRole-${module.eks.cluster_name}"
+#   provider_url                  = module.eks.oidc_provider
+#   role_policy_arns              = [
+#     data.aws_iam_policy.prometheus_remote_write.arn,
+#     data.aws_iam_policy.cloudwatch_agent.arn
+#   ]
+#   oidc_fully_qualified_subjects = ["system:serviceaccount:prometheus:amp-iamproxy-ingest-role"]
+# }
