@@ -24,7 +24,7 @@ resource "aws_iam_policy" "terraform" {
             "ecr:*",
             "route53:*",
             "route53resolver:*",
-            "ssm:StartSession",
+            "ssm:*",
             "aps:*",
             "eks:*"
           ]

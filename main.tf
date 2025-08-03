@@ -11,7 +11,7 @@ module "iam" {
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "5.8.1"
+  version = "~> 6.0"
 
   name = "${local.namespace}-vpc"
 
@@ -36,17 +36,25 @@ module "vpc" {
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "20.8.5"
+  version = "~> 21.0"
 
-  cluster_name    = local.cluster_name
-  cluster_version = "1.33"
+  name    = local.cluster_name
+  kubernetes_version = "1.33"
 
-  cluster_endpoint_public_access           = true
+  endpoint_public_access           = true
   enable_cluster_creator_admin_permissions = true
 
-  cluster_addons = {
+  addons = {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.irsa-ebs-csi.iam_role_arn
+    }
+    coredns                = {}
+    eks-pod-identity-agent = {
+      before_compute = true
+    }
+    kube-proxy             = {}
+    vpc-cni                = {
+      before_compute = true
     }
     # adot = {
       # configuration_values = jsonencode(
@@ -81,30 +89,41 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
-  eks_managed_node_group_defaults = {
-    ami_type = "AL2023_x86_64_STANDARD"
-
-  }
-
   eks_managed_node_groups = {
     one = {
       name = "node-group-1"
+      ami_type = "AL2023_x86_64_STANDARD"
 
-      instance_types = ["t3.small"]
+      instance_types = ["m5.2xlarge"]
 
       min_size     = 1
       max_size     = 3
-      desired_size = 2
+      desired_size = 1
     }
 
     two = {
       name = "node-group-2"
+      ami_type = "AL2023_x86_64_STANDARD"
 
-      instance_types = ["t3.small"]
+      instance_types = ["m5.2xlarge"]
 
       min_size     = 1
       max_size     = 2
       desired_size = 1
+    }
+  }
+
+  access_entries = {
+    netauto_terraform = {
+      principal_arn = "arn:aws:iam::594515248465:user/netauto_terraform"
+      policy_associations = {
+        cluster_admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
     }
   }
 }
@@ -115,7 +134,7 @@ data "aws_iam_policy" "ebs_csi_policy" {
 
 module "irsa-ebs-csi" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
-  version = "5.39.0"
+  version = "~> 5.0"
 
   create_role                   = true
   role_name                     = "AmazonEKSTFEBSCSIRole-${module.eks.cluster_name}"
