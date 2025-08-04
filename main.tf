@@ -143,18 +143,9 @@ module "irsa-ebs-csi" {
   oidc_fully_qualified_subjects = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
 }
 
-# resource "helm_release" "cert_manager" {
-#   name       = "cert-manager"
-#   repository = "https://charts.jetstack.io"
-#   chart      = "cert-manager"
-#   version    = "v1.17.0"
-#   namespace = "cert-manager"
-#   create_namespace = true
-#   set {
-#     name = "crds.enabled"
-#     value = true
-#   }
-# }
+module "cert-manager" {
+  source = "./modules/cert_manager"
+}
 
 # resource "aws_prometheus_workspace" "this" {
 #   alias = "${local.namespace}-amp"
