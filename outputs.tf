@@ -18,9 +18,9 @@ output "cluster_name" {
   description = "Kubernetes Cluster Name"
   value       = module.eks.cluster_name
 }
-# output "prometheus" {
 
-#   value = {
-#     endpoint = aws_prometheus_workspace.this.prometheus_endpoint
-#   }
-# }
+output "prometheus" {
+  value = {
+    endpoint = aws_prometheus_workspace.this.prometheus_endpoint
+  }
+}

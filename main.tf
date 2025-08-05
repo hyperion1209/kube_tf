@@ -39,7 +39,7 @@ module "eks" {
   version = "~> 21.0"
 
   name               = local.cluster_name
-  kubernetes_version = "1.33"
+  kubernetes_version = "1.32"
 
   endpoint_public_access                   = true
   enable_cluster_creator_admin_permissions = true
@@ -56,33 +56,34 @@ module "eks" {
     vpc-cni = {
       before_compute = true
     }
-    # adot = {
-    # configuration_values = jsonencode(
-    #   {
-    #       "collector": {
-    #           "prometheusMetrics": {
-    #               "serviceAccount": {
-    #                 "annotations": {
-    #                     "eks.amazonaws.com/role-arn" = "${module.prom_metrics_role.iam_role_arn}"
-    #                 }
-    #               },
-    #               "exporters": {
-    #                   "prometheusremotewrite": {
-    #                       "endpoint": "${aws_prometheus_workspace.this.prometheus_endpoint}api/v1/remote_write"
-    #                   }
-    #               },
-    #               "pipelines": {
-    #                   "metrics": {
-    #                       "amp": {
-    #                           "enabled": true
-    #                       }
-    #                   }
-    #               }
-    #           }
-    #       }
-    #   } 
-    # )
-    # }
+    adot = {
+      addon_version = "v0.117.0-eksbuild.1"
+      configuration_values = jsonencode(
+        {
+          "collector" : {
+            "prometheusMetrics" : {
+              "serviceAccount" : {
+                "annotations" : {
+                  "eks.amazonaws.com/role-arn" = "${module.adot_col_role.iam_role_arn}"
+                }
+              },
+              "exporters" : {
+                "prometheusremotewrite" : {
+                  "endpoint" : "${aws_prometheus_workspace.this.prometheus_endpoint}api/v1/remote_write"
+                }
+              },
+              "pipelines" : {
+                "metrics" : {
+                  "amp" : {
+                    "enabled" : true
+                  }
+                }
+              }
+            }
+          }
+        }
+      )
+    }
 
   }
 
@@ -143,32 +144,33 @@ module "irsa-ebs-csi" {
   oidc_fully_qualified_subjects = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
 }
 
+resource "aws_prometheus_workspace" "this" {
+  alias = "${local.namespace}-amp"
+}
+
 module "cert-manager" {
   source = "./modules/cert_manager"
 }
 
-# resource "aws_prometheus_workspace" "this" {
-#   alias = "${local.namespace}-amp"
-# }
+data "aws_iam_policy" "prometheus_remote_write" {
+  arn = "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess"
+}
 
-# data "aws_iam_policy" "prometheus_remote_write" {
-#   arn = "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess"
-# }
+data "aws_iam_policy" "cloudwatch_agent" {
+  arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
 
-# data "aws_iam_policy" "cloudwatch_agent" {
-#   arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-# }
+module "adot_col_role" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
+  version = "5.59.0"
 
-# module "prom_metrics_role" {
-#   source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
-#   version = "5.39.0"
-
-#   create_role                   = true
-#   role_name                     = "AdotPromRole-${module.eks.cluster_name}"
-#   provider_url                  = module.eks.oidc_provider
-#   role_policy_arns              = [
-#     data.aws_iam_policy.prometheus_remote_write.arn,
-#     data.aws_iam_policy.cloudwatch_agent.arn
-#   ]
-#   oidc_fully_qualified_subjects = ["system:serviceaccount:prometheus:amp-iamproxy-ingest-role"]
-# }
+  create_role  = true
+  role_name    = "AdotPromRole-${module.eks.cluster_name}"
+  provider_url = module.eks.oidc_provider
+  role_policy_arns = [
+    data.aws_iam_policy.prometheus_remote_write.arn,
+    data.aws_iam_policy.cloudwatch_agent.arn
+  ]
+  oidc_fully_qualified_subjects  = ["system:serviceaccount:opentelemetry-operator-system:adot-col-prom-metrics"]
+  oidc_fully_qualified_audiences = ["sts.amazonaws.com"]
+}
